@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - displayName: string (optional)
+    //   - email: string (required) - User email
+    //   - photoURL: string (optional)
+    //   - role: string (required) - 'user' or 'admin'
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: favorites
+    // Document ID: auto-generated or {userId}_{productId}
+    // Fields:
+    //   - userId: string (required) - Owner UID
+    //   - productId: int (required) - Product ID
+    //   - productName: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: reviews
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required) - Creator UID
+    //   - userName: string (optional)
+    //   - productId: int (required) - Target product
+    //   - rating: int (required) - 1 to 5
+    //   - comment: string (required) - Max 1000 chars
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "dihack86codev@gmail.com" && request.auth.token.email_verified == true)); // Default admin
+    }
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.email is string &&
+             data.role in ['user', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidFavorite(data) {
+      return data.userId == request.auth.uid &&
+             data.productId is int &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidReview(data) {
+      return data.userId == request.auth.uid &&
+             data.productId is int &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 1000 &&
+             data.createdAt is timestamp;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /favorites/{favoriteId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidFavorite(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true; // Everyone can read reviews
+      allow create: if isAuthenticated() && isValidReview(request.resource.data);
+      allow update, delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+    }
+
+    match /test/{testId} {
+      allow read: if true; // Public read for connection test
+    }
+
+    match /product_images/{imageId} {
+      allow read: if true; // Public read for AI generated images
+      allow write: if isAuthenticated(); // Allow logged in users to contribute generated images
+    }
+  }
+}

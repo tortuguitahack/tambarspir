@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "User's favorite drink selection",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "productId": { "type": "integer" },
+        "productName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "productId"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Product review with rating and comment",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "productId": { "type": "integer" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "productId", "rating", "comment"]
+    },
+    "ProductImage": {
+      "title": "ProductImage",
+      "description": "AI generated high quality product image",
+      "type": "object",
+      "properties": {
+        "productName": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "style": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productName", "imageUrl"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/favorites/{favoriteId}": {
+      "schema": "Favorite",
+      "description": "User's favorite list"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Product reviews"
+    },
+    "/test/{testId}": {
+      "schema": { "type": "object", "properties": {} },
+      "description": "Connectivity test collection"
+    },
+    "/product_images/{imageId}": {
+      "schema": "ProductImage",
+      "description": "AI generated product images repository"
+    }
+  }
+}
